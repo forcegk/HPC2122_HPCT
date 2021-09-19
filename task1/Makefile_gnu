@@ -1,0 +1,44 @@
+BUILD=debug
+FLAVOR=gnu
+
+CC=gcc
+CXX=g++
+LD=gcc
+
+cflags.debug = -O0 -g3 -pipe
+cflags.release = -O3 -s -pipe
+CFLAGS=$(cflags.$(BUILD))
+
+WARN=-Wall -Wextra
+
+ldflags.debug=-O0 -g3
+ldflags.release=-O3 -s
+LDFLAGS=$(ldflags.$(BUILD))
+
+LDLIBS=-lm -lopenblas
+
+SRCDIR  = src
+OBJDIR  = obj
+DESTDIR = target
+
+SOURCES := $(wildcard $(SRCDIR)/*.c)
+OBJECTS := $(patsubst $(SRCDIR)/%.c,$(OBJDIR)/$(FLAVOR)/$(BUILD)/%.o,$(SOURCES))
+
+$(BUILD).out: $(OBJECTS)
+	@mkdir -p $(DESTDIR)/$(FLAVOR)
+	$(LD) $^ -o $(DESTDIR)/$(FLAVOR)/$@ $(LDFLAGS) $(LDLIBS)
+
+$(OBJDIR)/$(FLAVOR)/$(BUILD)/%.o: $(SRCDIR)/%.c Makefile 
+	@mkdir -p $(OBJDIR)/$(FLAVOR)/$(BUILD)
+	$(CC) $(CFLAGS) -MMD -MP -c $< -o $@
+
+run:
+	@./$(DESTDIR)/$(FLAVOR)/$(BUILD).out
+
+c: clean
+clean:
+	rm -rf $(OBJDIR)/$(FLAVOR)/$(BUILD) $(DESTDIR)/$(FLAVOR)/$(BUILD).out
+
+call: cleanall
+cleanall:
+	rm -rf $(OBJDIR) $(DESTDIR)
