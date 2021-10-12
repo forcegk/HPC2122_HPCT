@@ -22,19 +22,6 @@ double *generate_matrix(int size) {
     return matrix;
 }
 
-void print_matrix(const char *name, double *matrix, int size) {
-    int i, j;
-
-    printf("matrix: %s \n", matrix);
-
-    for (i = 0; i < size; i++) {
-        for (j = 0; j < size; j++) {
-            printf("%f ", matrix[i * size + j]);
-        }
-        printf("\n");
-    }
-}
-
 int is_nearly_equal(double x, double y) {
     const double epsilon = 1e-5;
     return abs(x - y) <= epsilon * abs(x);
@@ -55,51 +42,56 @@ int my_dgesv(int n, int nrhs, double *a, int lda, int *ipiv, double *b, int ldb)
     int i, j, k;
     double *l, *u, *z;
 
-    l = (double *) malloc(sizeof(double) * n * n);
-    u = (double *) malloc(sizeof(double) * n * n);
-    z = (double *) malloc(sizeof(double) * n * n);
+    l = (double *) calloc(n * n, sizeof(double));
+    u = (double *) calloc(n * n, sizeof(double));
+    z = (double *) calloc(n * n, sizeof(double));
 
     // compute the LU decomposition of a
-    for (i = 0; i < n; i++)
-        l[i * n + 1] = a[i * n + 1];
-    for (i = 2; i < n; i++)
-        u[n + i] = a[n + i] / l[n + 1];
-    for (i = 0; i < n; i++)
-        u[i * n + i] = 1;
-
-    for (i = 2; i < n; i++) {
-        for (j = 2; j < n; j++) {
-            if (i >= j) {
-                l[i * n + j] = a[i * n + j];
-                for (k = 1; k <= j - 1; k++)
-                    l[i * n + j] -= l[i * n + k] * u[k * n + j];
+    for (i = 0; i < n; i++) {
+        for (j = 0; j < n; j++) {
+            if (j < i) {
+                l[j * n + i] = 0;
             } else {
-                u[i * n + j] = a[i * n + j];
-                for (k = 1; k <= j - 1; k++)
-                    u[i * n + j] = -l[i * n + k] * u[k * n + j];
-                u[i * n + j] /= l[i * n + i];
+                l[j * n + i] = a[j * n + i];
+                for (k = 0; k < i; k++) {
+                    l[j * n + i] -= l[j * n + k] * u[k * n + i];
+                }
+            }
+        }
+        for (j = 0; j < n; j++) {
+            if (j < i) {
+                u[i * n + j] = 0;
+            } else if (j == i) {
+                u[i * n + j] = 1;
+            } else {
+                u[i * n + j] = a[i * n + j] / l[i * n + i];
+                for (k = 0; k < i; k++) {
+                    u[i * n + j] -= (l[i * n + k] * u[k * n + j])
+                                   / l[i * n + i];
+                }
             }
         }
     }
 
     // forward substitution
-    for (k = 0; k < n; k++) {
-        z[k * n] = b[k * n] / l[0];
-        for (i = 1; i < n; i++) {
-            z[k * n + i] = b[k * n + i];
-            for (j = 0; j < i - 1; j++)
-                z[k * n + i] -= l[i * n + j] * z[k * n + j];
-            z[k * n + i] /= l[i * n + i];
+    for (i = 0; i < n; i++) {
+        for (j = 0; j < n; j++) {
+            z[j * n + i] = b[j * n + i];
+            for (k = 0; k < j; k++) {
+                z[j * n + i] -= l[j * n + k] * z[k * n + i];
+            }
+            z[j * n + i] /= l[j * n + j];
         }
     }
 
     // backward substitution
-    for (k = 0; k < n; k++) {
-        b[k * n + n - 1] = z[k * n + n - 1];
-        for (i = n - 1; i >= 0; i--) {
-            b[k * n + i] = z[k * n + i];
-            for (j = i + 1; j < n; j++)
-                b[k * n + i] -= u[i * n + j] * b[k * n + j];
+    for (i = 0; i < n; i++) {
+        for (j = n - 1; j >= 0; j--) {
+            b[j * n + i] = z[j * n + i];
+            for (k = n - 1; k > j; k--) {
+                b[j * n + i] -= u[j * n + k] * b[k * n + i];
+            }
+            b[j * n + i] /= u[j * n + j];
         }
     }
 

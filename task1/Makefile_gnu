@@ -15,7 +15,7 @@ ldflags.debug=-O0 -g3
 ldflags.release=-O3 -s
 LDFLAGS=$(ldflags.$(BUILD))
 
-LDLIBS=-lm -lopenblas
+LDLIBS=-lm -lopenblas -llapacke
 
 SRCDIR  = src
 OBJDIR  = obj
