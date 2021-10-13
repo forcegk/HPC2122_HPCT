@@ -40,17 +40,19 @@ int check_result(double *bref, double *b, int size) {
 
 int my_dgesv(int n, int nrhs, double *a, int lda, int *ipiv, double *b, int ldb) {
     int i, j, k;
-    double *l, *u, *z;
+    double *l, *u, *z, *x;
 
     l = (double *) calloc(n * n, sizeof(double));
     u = (double *) calloc(n * n, sizeof(double));
     z = (double *) calloc(n * n, sizeof(double));
+    x = (double *) calloc(n * n, sizeof(double));
 
     // compute the LU decomposition of a
     for (i = 0; i < n; i++) {
         for (j = 0; j < n; j++) {
             if (j < i) {
-                l[j * n + i] = 0;
+                // it is already 0, avoid a possible cache miss
+                continue;
             } else {
                 l[j * n + i] = a[j * n + i];
                 for (k = 0; k < i; k++) {
@@ -60,15 +62,16 @@ int my_dgesv(int n, int nrhs, double *a, int lda, int *ipiv, double *b, int ldb)
         }
         for (j = 0; j < n; j++) {
             if (j < i) {
-                u[i * n + j] = 0;
+                // it is already 0, avoid a possible cache miss
+                continue;
             } else if (j == i) {
                 u[i * n + j] = 1;
             } else {
-                u[i * n + j] = a[i * n + j] / l[i * n + i];
+                u[i * n + j] = a[i * n + j];
                 for (k = 0; k < i; k++) {
-                    u[i * n + j] -= (l[i * n + k] * u[k * n + j])
-                                   / l[i * n + i];
+                    u[i * n + j] -= l[i * n + k] * u[k * n + j];
                 }
+                u[i * n + j] /= l[i * n + i];
             }
         }
     }
@@ -76,28 +79,36 @@ int my_dgesv(int n, int nrhs, double *a, int lda, int *ipiv, double *b, int ldb)
     // forward substitution
     for (i = 0; i < n; i++) {
         for (j = 0; j < n; j++) {
-            z[j * n + i] = b[j * n + i];
+            z[i * n + j] = b[j * n + i];
             for (k = 0; k < j; k++) {
-                z[j * n + i] -= l[j * n + k] * z[k * n + i];
+                z[i * n + j] -= l[j * n + k] * z[i * n + k];
             }
-            z[j * n + i] /= l[j * n + j];
+            z[i * n + j] /= l[j * n + j];
         }
     }
 
     // backward substitution
     for (i = 0; i < n; i++) {
         for (j = n - 1; j >= 0; j--) {
-            b[j * n + i] = z[j * n + i];
+            x[i * n + j] = z[i * n + j];
             for (k = n - 1; k > j; k--) {
-                b[j * n + i] -= u[j * n + k] * b[k * n + i];
+                x[i * n + j] -= u[j * n + k] * x[i * n + k];
             }
-            b[j * n + i] /= u[j * n + j];
+            x[i * n + j] /= u[j * n + j];
+        }
+    }
+
+    // traspose x
+    for (i = 0; i < n; i++) {
+        for (j = 0; j < n; j++) {
+            b[i * n + j] = x[j * n + i];
         }
     }
 
     free(l);
     free(u);
     free(z);
+    free(x);
 
     return 0;
 }
