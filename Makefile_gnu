@@ -5,7 +5,7 @@ CC=gcc
 CXX=g++
 LD=gcc
 
-cflags.debug = -O0 -g3 -pipe
+cflags.debug = -O3 -g3 -pipe -ftree-loop-vectorize -fopt-info-vec -fopt-info-missed -fopt-info-vec-all -fopt-info-optall-optimized
 cflags.release = -O3 -s -pipe
 CFLAGS=$(cflags.$(BUILD))
 

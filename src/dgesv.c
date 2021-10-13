@@ -9,6 +9,8 @@
 #include "lapacke.h"
 #endif
 
+typedef double aligned_double __attribute__((aligned (16)));
+
 double *generate_matrix(int size) {
     int i;
     double *matrix = (double *) malloc(sizeof(double) * size * size);
@@ -38,41 +40,31 @@ int check_result(double *bref, double *b, int size) {
     return 1;
 }
 
-int my_dgesv(int n, int nrhs, double *a, int lda, int *ipiv, double *b, int ldb) {
+int my_dgesv(int n, int nrhs, double *restrict a, int lda, int *ipiv, double *restrict b, int ldb) {
     int i, j, k;
-    double *l, *u, *z, *x;
+    aligned_double *restrict l, *restrict u, *restrict z, *restrict x;
 
-    l = (double *) calloc(n * n, sizeof(double));
-    u = (double *) calloc(n * n, sizeof(double));
-    z = (double *) calloc(n * n, sizeof(double));
-    x = (double *) calloc(n * n, sizeof(double));
+    l = (aligned_double *) calloc(n * n, sizeof(aligned_double));
+    u = (aligned_double *) calloc(n * n, sizeof(aligned_double));
+    z = (aligned_double *) calloc(n * n, sizeof(aligned_double));
+    x = (aligned_double *) calloc(n * n, sizeof(aligned_double));
 
     // compute the LU decomposition of a
     for (i = 0; i < n; i++) {
-        for (j = 0; j < n; j++) {
-            if (j < i) {
-                // it is already 0, avoid a possible cache miss
-                continue;
-            } else {
-                l[j * n + i] = a[j * n + i];
-                for (k = 0; k < i; k++) {
-                    l[j * n + i] -= l[j * n + k] * u[k * n + i];
-                }
+        for (j = i; j < n; j++) {
+            l[j * n + i] = a[j * n + i];
+            for (k = 0; k < i; k++) {
+                l[j * n + i] -= l[j * n + k] * u[k * n + i];
             }
-        }
-        for (j = 0; j < n; j++) {
-            if (j < i) {
-                // it is already 0, avoid a possible cache miss
-                continue;
-            } else if (j == i) {
-                u[i * n + j] = 1;
-            } else {
-                u[i * n + j] = a[i * n + j];
-                for (k = 0; k < i; k++) {
-                    u[i * n + j] -= l[i * n + k] * u[k * n + j];
-                }
-                u[i * n + j] /= l[i * n + i];
+        } 
+
+        u[i * n + i] = 1;
+        for (j = i + 1; j < n; j++) {
+            u[i * n + j] = a[i * n + j];
+            for (k = 0; k < i; k++) {
+                u[i * n + j] -= l[i * n + k] * u[k * n + j];
             }
+            u[i * n + j] /= l[i * n + i];
         }
     }
 
@@ -98,7 +90,7 @@ int my_dgesv(int n, int nrhs, double *a, int lda, int *ipiv, double *b, int ldb)
         }
     }
 
-    // traspose x
+    // transpose x
     for (i = 0; i < n; i++) {
         for (j = 0; j < n; j++) {
             b[i * n + j] = x[j * n + i];
