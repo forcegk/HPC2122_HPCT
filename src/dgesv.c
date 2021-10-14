@@ -40,9 +40,13 @@ int check_result(double *bref, double *b, int size) {
     return 1;
 }
 
-int my_dgesv(int n, int nrhs, double *restrict a, int lda, int *ipiv, double *restrict b, int ldb) {
+int my_dgesv(int n, __attribute__((unused)) int nrhs, double *restrict a, __attribute__((unused)) int lda, __attribute__((unused)) int *ipiv, double *restrict b, __attribute__((unused)) int ldb) {
     int i, j, k;
+
     aligned_double *restrict l, *restrict u, *restrict z, *restrict x;
+
+    aligned_double *restrict A, *restrict B;
+    aligned_double *restrict L, *restrict U, *restrict UU, *restrict Z, *restrict X;
 
     l = (aligned_double *) calloc(n * n, sizeof(aligned_double));
     u = (aligned_double *) calloc(n * n, sizeof(aligned_double));
@@ -51,43 +55,66 @@ int my_dgesv(int n, int nrhs, double *restrict a, int lda, int *ipiv, double *re
 
     // compute the LU decomposition of a
     for (i = 0; i < n; i++) {
+        L = l + i * n;
+        A = a + i * n;
         for (j = i; j < n; j++) {
-            l[j * n + i] = a[j * n + i];
+            L[i] = A[i];
+            U = u;
             for (k = 0; k < i; k++) {
-                l[j * n + i] -= l[j * n + k] * u[k * n + i];
+                L[i] -= L[k] * U[i];
+                U += n;
             }
+            L += n;
+            A += n;
         } 
 
-        u[i * n + i] = 1;
+        L = l + i * n;
+        A = a + i * n;
+        U = u + i * n;
+        U[i] = 1;
         for (j = i + 1; j < n; j++) {
-            u[i * n + j] = a[i * n + j];
+            U[j] = A[j];
+            UU = u;
             for (k = 0; k < i; k++) {
-                u[i * n + j] -= l[i * n + k] * u[k * n + j];
+                U[j] -= L[k] * UU[j];
+                UU += n;
             }
-            u[i * n + j] /= l[i * n + i];
+            U[j] /= L[i];
         }
     }
 
     // forward substitution
+    Z = z;
     for (i = 0; i < n; i++) {
+        B = b;
+        L = l;
         for (j = 0; j < n; j++) {
-            z[i * n + j] = b[j * n + i];
+            Z[j] = B[i];
             for (k = 0; k < j; k++) {
-                z[i * n + j] -= l[j * n + k] * z[i * n + k];
+                Z[j] -= L[k] * Z[k];
             }
-            z[i * n + j] /= l[j * n + j];
+            Z[j] /= L[j];
+            B += n;
+            L += n;
         }
+        Z += n;
     }
 
     // backward substitution
+    X = x;
+    Z = z;
     for (i = 0; i < n; i++) {
+        U = u + n * n - n;
         for (j = n - 1; j >= 0; j--) {
-            x[i * n + j] = z[i * n + j];
+            X[j] = Z[j];
             for (k = n - 1; k > j; k--) {
-                x[i * n + j] -= u[j * n + k] * x[i * n + k];
+                X[j] -= U[k] * X[k];
             }
-            x[i * n + j] /= u[j * n + j];
+            X[j] /= U[j];
+            U -= n;
         }
+        X += n;
+        Z += n;
     }
 
     // transpose x
