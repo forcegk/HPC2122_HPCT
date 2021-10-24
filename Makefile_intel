@@ -5,17 +5,25 @@ CC=icc
 CXX=icc
 LD=icc
 
-cflags.debug = -O0 -g
-cflags.release = -O3 -s
+OLEVEL = -O3
+
+cflags.debug = $(OLEVEL) -g -qopt-report=2 -qopt-report-phase=vec -march=core-avx2 -fma -ftz -fomit-frame-pointer
+cflags.release = $(OLEVEL) -s -march=core-avx2 -fma -ftz -fomit-frame-pointer
 CFLAGS=$(cflags.$(BUILD))
+
 
 WARN=-Wall
 
-ldflags.debug=-O0 -g
-ldflags.release=-O3 -s
+ldflags.debug = $(OLEVEL) -g
+ldflags.release = $(OLEVEL) -s
 LDFLAGS=$(ldflags.$(BUILD))
 
-LDLIBS=-mkl
+LDLIBS=-qmkl
+
+ifeq ($(OMP),1)
+	CFLAGS += -qopenmp -static-intel
+	LDFLAGS += -qopenmp -static-intel
+endif
 
 SRCDIR  = src
 OBJDIR  = obj

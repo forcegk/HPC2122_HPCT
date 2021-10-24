@@ -1,4 +1,4 @@
 BUILD=debug
 
 default:
-	@echo "Use like: make -f Makefile_intel or make -f Makefile_gnu. Set BUILD={debug|release}"
+	@echo "Source env.sh and execute makegnu or makeintel. Set BUILD={debug|release} and OMP={0|1}"

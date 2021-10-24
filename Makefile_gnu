@@ -5,17 +5,25 @@ CC=gcc
 CXX=g++
 LD=gcc
 
-cflags.debug = -O3 -g3 -pipe -ftree-loop-vectorize -fopt-info-vec -fopt-info-missed -fopt-info-vec-all -fopt-info-optall-optimized
-cflags.release = -O3 -s -pipe
+OLEVEL = -O3
+
+cflags.debug = $(OLEVEL) -g3 -pipe -ftree-vectorize -fopt-info-vec -fopt-info-missed -fopt-info-vec-all -fopt-info-optall-optimized
+cflags.release = $(OLEVEL) -s -pipe
 CFLAGS=$(cflags.$(BUILD))
+
 
 WARN=-Wall -Wextra
 
-ldflags.debug=-O0 -g3
-ldflags.release=-O3 -s
+ldflags.debug = $(OLEVEL) -g3
+ldflags.release = $(OLEVEL) -s
 LDFLAGS=$(ldflags.$(BUILD))
 
 LDLIBS=-lm -lopenblas -llapacke
+
+ifeq ($(OMP),1)
+	CFLAGS += -fopenmp
+	LDFLAGS += -fopenmp
+endif
 
 SRCDIR  = src
 OBJDIR  = obj

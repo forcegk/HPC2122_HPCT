@@ -1,6 +1,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <time.h>
+#include <errno.h>
 
 #if defined(__INTEL_COMPILER)
 #include "mkl_lapacke.h"
@@ -9,7 +10,7 @@
 #include "lapacke.h"
 #endif
 
-typedef double aligned_double __attribute__((aligned (16)));
+typedef double aligned_double __attribute__((aligned (32)));
 
 double *generate_matrix(int size) {
     int i;
@@ -53,33 +54,71 @@ int my_dgesv(int n, __attribute__((unused)) int nrhs, double *restrict a, __attr
     z = (aligned_double *) calloc(n * n, sizeof(aligned_double));
     x = (aligned_double *) calloc(n * n, sizeof(aligned_double));
 
+#if defined(_OPENMP)
+    aligned_double temp_double; 
+#endif
+
     // compute the LU decomposition of a
     for (i = 0; i < n; i++) {
         L = l + i * n;
         A = a + i * n;
+
         for (j = i; j < n; j++) {
+#if defined(_OPENMP)
+            temp_double = A[i];
+#else
             L[i] = A[i];
             U = u;
+#endif
+
+#pragma code_align 32
+#pragma omp parallel for private(U) reduction(-:temp_double) if(i > 256)
             for (k = 0; k < i; k++) {
-                L[i] -= L[k] * U[i];
-                U += n;
+#if defined(_OPENMP)
+                    U = u + k*n;
+                    temp_double -= L[k] * U[i];
+#else
+                    L[i] -= L[k] * U[i];
+                    U += n;
+#endif
             }
+#if defined(_OPENMP)
+            L[i] = temp_double;
+#endif
             L += n;
             A += n;
-        } 
+        }
 
         L = l + i * n;
         A = a + i * n;
         U = u + i * n;
         U[i] = 1;
         for (j = i + 1; j < n; j++) {
+
+
+#if defined(_OPENMP)
+            temp_double = A[j];
+#else
             U[j] = A[j];
             UU = u;
+#endif
+
+#pragma code_align 32
+#pragma omp parallel for private(UU) reduction(-:temp_double) if(i > 256)
             for (k = 0; k < i; k++) {
+#if defined(_OPENMP)
+                UU = u + k*n;
+                temp_double -= L[k] * UU[j];
+#else
                 U[j] -= L[k] * UU[j];
                 UU += n;
+#endif
             }
+#if defined(_OPENMP)
+            U[j] = temp_double / L[i];
+#else
             U[j] /= L[i];
+#endif
         }
     }
 
@@ -118,6 +157,7 @@ int my_dgesv(int n, __attribute__((unused)) int nrhs, double *restrict a, __attr
     }
 
     // transpose x
+#pragma omp parallel for private(i,j)
     for (i = 0; i < n; i++) {
         for (j = 0; j < n; j++) {
             b[i * n + j] = x[j * n + i];
@@ -133,12 +173,22 @@ int my_dgesv(int n, __attribute__((unused)) int nrhs, double *restrict a, __attr
 }
 
 int main(int argc, char *argv[]) {
-    int size;
+    int size, status;
 
     double *a, *aref;
     double *b, *bref;
 
-    size = atoi(argv[1]);
+    // very basic error check, but DAMN I am tired of segfaults when I forget the param hehe
+    if(argc > 1){
+        size = strtoul(argv[1], NULL, 0);
+    } else {
+        errno = EFAULT;
+    }
+
+    if(size<=0 || errno){
+        fprintf(stderr, "Syntax: \"%s n\", where:\n\t- n is a positive integer number\n\n", argv[0]);
+        exit(1);
+    }
 
     a = generate_matrix(size);
     b = generate_matrix(size);
@@ -170,9 +220,18 @@ int main(int argc, char *argv[]) {
 
     if (check_result(bref, b, size) == 1) {
         printf("Result is ok!\n");
+        status = 0;
     } else {
         printf("Result is wrong!\n");
+        status = 1;
     }
 
-    return 0;
+    free(ipiv);
+    free(ipiv2);
+    free(a);
+    free(b);
+    free(aref);
+    free(bref);
+
+    return status;
 }
