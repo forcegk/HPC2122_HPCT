@@ -1,6 +1,6 @@
 #include <stdio.h>
 #include <stdlib.h>
-#include <time.h>
+#include <sys/time.h>
 #include <errno.h>
 
 #if defined(__INTEL_COMPILER)
@@ -203,20 +203,30 @@ int main(int argc, char *argv[]) {
     int *ipiv = (int *)malloc(sizeof(int) * size);
 #endif
 
-    clock_t tStart = clock();
+    struct timeval tStart, tEnd;
+    gettimeofday(&tStart, NULL);
     info = LAPACKE_dgesv(LAPACK_ROW_MAJOR, n, nrhs, aref, lda, ipiv, bref, ldb);
+    gettimeofday(&tEnd, NULL);
+
+    double time = (double) (tEnd.tv_usec - tStart.tv_usec) / 1000000
+                  + (double) (tEnd.tv_sec - tStart.tv_sec);
 
 #if defined(__INTEL_COMPILER)
-    printf("Time taken by MKL: %.2fs\n", (double)(clock() - tStart) / CLOCKS_PER_SEC);
+    printf("Time taken by MKL: %.2fs\n", time);
     MKL_INT *ipiv2 = (MKL_INT *)malloc(sizeof(MKL_INT) * size);
 #elif defined(__GNUC__) || defined(__GNUG__)
-    printf("Time taken by LAPACK: %.2fs\n", (double)(clock() - tStart) / CLOCKS_PER_SEC);
+    printf("Time taken by LAPACK: %.2fs\n", time);
     int *ipiv2 = (int *)malloc(sizeof(int) * size);
 #endif
 
-    tStart = clock();
+    gettimeofday(&tStart, NULL);
     my_dgesv(n, nrhs, a, lda, ipiv2, b, ldb);
-    printf("Time taken by my implementation: %.2fs\n", (double)(clock() - tStart) / CLOCKS_PER_SEC);
+    gettimeofday(&tEnd, NULL);
+
+    time = (double) (tEnd.tv_usec - tStart.tv_usec) / 1000000
+                  + (double) (tEnd.tv_sec - tStart.tv_sec);
+
+    printf("Time taken by my implementation: %.2fs\n", time);
 
     if (check_result(bref, b, size) == 1) {
         printf("Result is ok!\n");
