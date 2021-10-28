@@ -7,8 +7,8 @@ LD=gcc
 
 OLEVEL = -O3
 
-cflags.debug = $(OLEVEL) -g3 -pipe -ftree-vectorize -fopt-info-vec -fopt-info-missed -fopt-info-vec-all -fopt-info-optall-optimized
-cflags.release = $(OLEVEL) -s -pipe
+cflags.debug = $(OLEVEL) -g3 -pipe -ftree-vectorize -fopt-info-vec -fopt-info-missed -fopt-info-vec-all -fopt-info-optall-optimized -march=native
+cflags.release = $(OLEVEL) -s -pipe -march=native
 CFLAGS=$(cflags.$(BUILD))
 
 
