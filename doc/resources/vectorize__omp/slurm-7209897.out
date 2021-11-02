@@ -1,0 +1,97 @@
+slurmstepd: info: Setting TMPDIR to /scratch/7209897. Previous errors about TMPDIR can be discarded
+/var/log/slurm/spool_slurmd/job7209897/slurm_script: línea 11: cd: home/ulc/cursos/curso350/code/HPC2122_HPCT: No existe el fichero o el directorio
+icc/2018.5.274 unloaded 
+ifort/2018.5.274 unloaded 
+intel/2018.5.274 unloaded 
+impi/2018.5.288 unloaded 
+imkl/2018.5.274 unloaded 
+ 
+imkl/2018.5.274 loaded 
+icc/2018.5.274 loaded 
+ifort/2018.5.274 loaded 
+intel/2018.5.274 loaded 
+impi/2018.5.288 loaded 
+imkl/2018.5.274 unloaded 
+ 
+imkl/2018.5.274 loaded 
+impi/2018.5.288 unloaded 
+imkl/2018.5.274 unloaded 
+ 
+imkl/2018.5.274 loaded 
+impi/2018.5.288 loaded 
+imkl/2018.5.274 unloaded 
+ 
+imkl/2018.5.274 loaded 
+imkl/2018.5.274 unloaded 
+ 
+imkl/2018.5.274 loaded 
+openblas/0.3.9 unloaded 
+openblas/0.3.9 loaded 
+rm -rf obj target
+icc -O2 -s -march=core-avx2 -fma -ftz -fomit-frame-pointer -qopenmp -static-intel -MMD -MD -c src/dgesv.c -o obj/intel/release/dgesv.o
+icc obj/intel/release/dgesv.o -o target/intel/release.out -O2 -s -qopenmp -static-intel -mkl
+icc: warning #10237: -lcilkrts linked in dynamically, static library not available
+Executing for 1 cores. OLEVEL=-O2
+Time taken by MKL: 3.07s
+Time taken by my implementation: 2758.76s
+Result is ok!
+
+
+Executing for 2 cores. OLEVEL=-O2
+Time taken by MKL: 3.01s
+Time taken by my implementation: 1672.64s
+Result is ok!
+
+
+Executing for 4 cores. OLEVEL=-O2
+Time taken by MKL: 2.96s
+Time taken by my implementation: 827.56s
+Result is ok!
+
+
+Executing for 8 cores. OLEVEL=-O2
+Time taken by MKL: 2.92s
+Time taken by my implementation: 431.30s
+Result is ok!
+
+
+Executing for 16 cores. OLEVEL=-O2
+Time taken by MKL: 2.94s
+Time taken by my implementation: 253.83s
+Result is ok!
+
+
+rm -rf obj target
+icc -O3 -s -march=core-avx2 -fma -ftz -fomit-frame-pointer -qopenmp -static-intel -MMD -MD -c src/dgesv.c -o obj/intel/release/dgesv.o
+icc obj/intel/release/dgesv.o -o target/intel/release.out -O3 -s -qopenmp -static-intel -mkl
+icc: warning #10237: -lcilkrts linked in dynamically, static library not available
+Executing for 1 cores. OLEVEL=-O3
+Time taken by MKL: 3.08s
+Time taken by my implementation: 2773.93s
+Result is ok!
+
+
+Executing for 2 cores. OLEVEL=-O3
+Time taken by MKL: 2.98s
+Time taken by my implementation: 1706.97s
+Result is ok!
+
+
+Executing for 4 cores. OLEVEL=-O3
+Time taken by MKL: 2.94s
+Time taken by my implementation: 831.53s
+Result is ok!
+
+
+Executing for 8 cores. OLEVEL=-O3
+Time taken by MKL: 2.96s
+Time taken by my implementation: 432.73s
+Result is ok!
+
+
+Executing for 16 cores. OLEVEL=-O3
+Time taken by MKL: 2.93s
+Time taken by my implementation: 252.87s
+Result is ok!
+
+

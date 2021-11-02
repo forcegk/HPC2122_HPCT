@@ -1,0 +1,78 @@
+slurmstepd: info: Setting TMPDIR to /scratch/7210473. Previous errors about TMPDIR can be discarded
+binutils/2.31.1 loaded 
+icc/2018.5.274 loaded 
+ifort/2018.5.274 loaded 
+intel/2018.5.274 loaded 
+numactl/2.0.12 loaded 
+impi/2018.5.288 loaded 
+ 
+imkl/2018.5.274 loaded 
+openblas/0.3.9 loaded 
+rm -rf obj target
+icc -O2 -s -march=core-avx2 -fma -ftz -fomit-frame-pointer -qopenmp -static-intel -MMD -MD -c src/dgesv.c -o obj/intel/release/dgesv.o
+icc obj/intel/release/dgesv.o -o target/intel/release.out -O2 -s -qopenmp -static-intel -mkl
+icc: warning #10237: -lcilkrts linked in dynamically, static library not available
+Executing for 1 cores. OLEVEL=-O2
+Time taken by MKL: 3.03s
+Time taken by my implementation: 2909.03s
+Result is ok!
+
+
+Executing for 2 cores. OLEVEL=-O2
+Time taken by MKL: 2.96s
+Time taken by my implementation: 1774.77s
+Result is ok!
+
+
+Executing for 4 cores. OLEVEL=-O2
+Time taken by MKL: 2.93s
+Time taken by my implementation: 864.80s
+Result is ok!
+
+
+Executing for 8 cores. OLEVEL=-O2
+Time taken by MKL: 2.90s
+Time taken by my implementation: 458.08s
+Result is ok!
+
+
+Executing for 16 cores. OLEVEL=-O2
+Time taken by MKL: 2.89s
+Time taken by my implementation: 262.92s
+Result is ok!
+
+
+rm -rf obj target
+icc -O3 -s -march=core-avx2 -fma -ftz -fomit-frame-pointer -qopenmp -static-intel -MMD -MD -c src/dgesv.c -o obj/intel/release/dgesv.o
+icc obj/intel/release/dgesv.o -o target/intel/release.out -O3 -s -qopenmp -static-intel -mkl
+icc: warning #10237: -lcilkrts linked in dynamically, static library not available
+Executing for 1 cores. OLEVEL=-O3
+Time taken by MKL: 3.06s
+Time taken by my implementation: 2895.54s
+Result is ok!
+
+
+Executing for 2 cores. OLEVEL=-O3
+Time taken by MKL: 2.96s
+Time taken by my implementation: 1800.29s
+Result is ok!
+
+
+Executing for 4 cores. OLEVEL=-O3
+Time taken by MKL: 2.92s
+Time taken by my implementation: 866.90s
+Result is ok!
+
+
+Executing for 8 cores. OLEVEL=-O3
+Time taken by MKL: 2.90s
+Time taken by my implementation: 456.99s
+Result is ok!
+
+
+Executing for 16 cores. OLEVEL=-O3
+Time taken by MKL: 2.90s
+Time taken by my implementation: 266.29s
+Result is ok!
+
+
