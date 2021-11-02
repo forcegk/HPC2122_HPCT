@@ -18,7 +18,7 @@ ldflags.debug = $(OLEVEL) -g
 ldflags.release = $(OLEVEL) -s
 LDFLAGS=$(ldflags.$(BUILD))
 
-LDLIBS=-qmkl
+LDLIBS=-mkl
 
 ifeq ($(OMP),1)
 	CFLAGS += -qopenmp -static-intel

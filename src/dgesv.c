@@ -46,123 +46,74 @@ int my_dgesv(int n, __attribute__((unused)) int nrhs, double *restrict a, __attr
 
     aligned_double *restrict l, *restrict u, *restrict z, *restrict x;
 
-    aligned_double *restrict A, *restrict B;
-    aligned_double *restrict L, *restrict U, *restrict UU, *restrict Z, *restrict X;
-
     l = (aligned_double *) calloc(n * n, sizeof(aligned_double));
     u = (aligned_double *) calloc(n * n, sizeof(aligned_double));
     z = (aligned_double *) calloc(n * n, sizeof(aligned_double));
     x = (aligned_double *) calloc(n * n, sizeof(aligned_double));
 
-#if defined(_OPENMP)
-    aligned_double temp_double; 
-#endif
-
+#pragma omp parallel private(i)
+{
     // compute the LU decomposition of a
     for (i = 0; i < n; i++) {
-        L = l + i * n;
-        A = a + i * n;
-
+#pragma omp for private(k) schedule(static)
         for (j = i; j < n; j++) {
-#if defined(_OPENMP)
-            temp_double = A[i];
-#else
-            L[i] = A[i];
-            U = u;
-#endif
-
-#pragma code_align 32
-#pragma omp parallel for private(U) reduction(-:temp_double) if(i > 256)
+            l[j * n + i] = a[j * n + i];
+#pragma ivdep
             for (k = 0; k < i; k++) {
-#if defined(_OPENMP)
-                    U = u + k*n;
-                    temp_double -= L[k] * U[i];
-#else
-                    L[i] -= L[k] * U[i];
-                    U += n;
-#endif
+                l[j * n + i] -= l[j * n + k] * u[k * n + i];
             }
-#if defined(_OPENMP)
-            L[i] = temp_double;
-#endif
-            L += n;
-            A += n;
-        }
+        } 
 
-        L = l + i * n;
-        A = a + i * n;
-        U = u + i * n;
-        U[i] = 1;
+// Using master because is substantially faster than single nowait
+#pragma omp master
+        u[i * n + i] = 1;
+
+#pragma omp for private(k) schedule(static)
         for (j = i + 1; j < n; j++) {
-
-
-#if defined(_OPENMP)
-            temp_double = A[j];
-#else
-            U[j] = A[j];
-            UU = u;
-#endif
-
-#pragma code_align 32
-#pragma omp parallel for private(UU) reduction(-:temp_double) if(i > 256)
+            u[i * n + j] = a[i * n + j];
+#pragma ivdep
             for (k = 0; k < i; k++) {
-#if defined(_OPENMP)
-                UU = u + k*n;
-                temp_double -= L[k] * UU[j];
-#else
-                U[j] -= L[k] * UU[j];
-                UU += n;
-#endif
+                u[i * n + j] -= l[i * n + k] * u[k * n + j];
             }
-#if defined(_OPENMP)
-            U[j] = temp_double / L[i];
-#else
-            U[j] /= L[i];
-#endif
+            u[i * n + j] /= l[i * n + i];
         }
     }
 
     // forward substitution
-    Z = z;
+#pragma omp for private(j,k) schedule(static) nowait
     for (i = 0; i < n; i++) {
-        B = b;
-        L = l;
         for (j = 0; j < n; j++) {
-            Z[j] = B[i];
+            z[i * n + j] = b[j * n + i];
+#pragma ivdep
             for (k = 0; k < j; k++) {
-                Z[j] -= L[k] * Z[k];
+                z[i * n + j] -= l[j * n + k] * z[i * n + k];
             }
-            Z[j] /= L[j];
-            B += n;
-            L += n;
+            z[i * n + j] /= l[j * n + j];
         }
-        Z += n;
     }
 
     // backward substitution
-    X = x;
-    Z = z;
+#pragma omp for private(j,k) schedule(static)
     for (i = 0; i < n; i++) {
-        U = u + n * n - n;
         for (j = n - 1; j >= 0; j--) {
-            X[j] = Z[j];
+            x[i * n + j] = z[i * n + j];
+#pragma ivdep
             for (k = n - 1; k > j; k--) {
-                X[j] -= U[k] * X[k];
+                x[i * n + j] -= u[j * n + k] * x[i * n + k];
             }
-            X[j] /= U[j];
-            U -= n;
+            x[i * n + j] /= u[j * n + j];
         }
-        X += n;
-        Z += n;
     }
 
     // transpose x
-#pragma omp parallel for private(i,j)
+#pragma omp for private(j) schedule(static)
     for (i = 0; i < n; i++) {
+#pragma ivdep
         for (j = 0; j < n; j++) {
             b[i * n + j] = x[j * n + i];
         }
     }
+} // #pragma omp parallel private(i)
 
     free(l);
     free(u);

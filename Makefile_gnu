@@ -18,7 +18,7 @@ ldflags.debug = $(OLEVEL) -g3
 ldflags.release = $(OLEVEL) -s
 LDFLAGS=$(ldflags.$(BUILD))
 
-LDLIBS=-lm -lopenblas -llapacke
+LDLIBS=-lm -lopenblas
 
 ifeq ($(OMP),1)
 	CFLAGS += -fopenmp
