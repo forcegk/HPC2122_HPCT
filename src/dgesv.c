@@ -44,12 +44,14 @@ int check_result(double *bref, double *b, int size) {
 int my_dgesv(int n, __attribute__((unused)) int nrhs, double *restrict a, __attribute__((unused)) int lda, __attribute__((unused)) int *ipiv, double *restrict b, __attribute__((unused)) int ldb) {
     int i, j, k;
 
-    aligned_double *restrict l, *restrict u, *restrict z, *restrict x;
+    aligned_double *restrict l, *restrict u;
+    aligned_double *restrict z, *restrict x, *restrict y;
 
     l = (aligned_double *) calloc(n * n, sizeof(aligned_double));
     u = (aligned_double *) calloc(n * n, sizeof(aligned_double));
     z = (aligned_double *) calloc(n * n, sizeof(aligned_double));
     x = (aligned_double *) calloc(n * n, sizeof(aligned_double));
+    y = (aligned_double *) calloc(n * n, sizeof(aligned_double));
 
 #pragma omp parallel private(i)
 {
@@ -60,22 +62,30 @@ int my_dgesv(int n, __attribute__((unused)) int nrhs, double *restrict a, __attr
             l[j * n + i] = a[j * n + i];
 #pragma ivdep
             for (k = 0; k < i; k++) {
-                l[j * n + i] -= l[j * n + k] * u[k * n + i];
+                l[j * n + i] -= l[j * n + k] * y[i * n + k];
             }
-        } 
+        }
 
-// Using master because is substantially faster than single nowait
 #pragma omp master
-        u[i * n + i] = 1;
+        y[i * n + i] = 1;
 
 #pragma omp for private(k) schedule(static)
         for (j = i + 1; j < n; j++) {
-            u[i * n + j] = a[i * n + j];
+            y[j * n + i] = a[i * n + j];
 #pragma ivdep
             for (k = 0; k < i; k++) {
-                u[i * n + j] -= l[i * n + k] * u[k * n + j];
+                y[j * n + i] -= l[i * n + k] * y[j * n + k];
             }
-            u[i * n + j] /= l[i * n + i];
+            y[j * n + i] /= l[i * n + i];
+        }
+    }
+
+    // transpose u
+#pragma omp for private(j) schedule(static)
+    for (i = 0; i < n; i++) {
+#pragma ivdep
+        for (j = 0; j < n; j++) {
+            u[i * n + j] = y[j * n + i];
         }
     }
 
@@ -119,6 +129,7 @@ int my_dgesv(int n, __attribute__((unused)) int nrhs, double *restrict a, __attr
     free(u);
     free(z);
     free(x);
+    free(y);
 
     return 0;
 }
