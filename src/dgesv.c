@@ -1,3 +1,4 @@
+#include <math.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <sys/time.h>
@@ -6,7 +7,6 @@
 #if defined(__INTEL_COMPILER)
 #include "mkl_lapacke.h"
 #elif defined(__GNUC__) || defined(__GNUG__)
-#include <math.h>
 #include "lapacke.h"
 #endif
 
@@ -26,8 +26,7 @@ double *generate_matrix(int size) {
 }
 
 int is_nearly_equal(double x, double y) {
-    const double epsilon = 1e-5;
-    return abs(x - y) <= epsilon * abs(x);
+    return fabs(x - y) <= 1e-5;
 }
 
 int check_result(double *bref, double *b, int size) {
